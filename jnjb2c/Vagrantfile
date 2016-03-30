@@ -69,7 +69,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   if Vagrant.has_plugin?("vagrant-hostsupdater")
     config.hostsupdater.aliases = [
-      "jnjb2c.vagrant",
+      "local.acuvue.co.uk",
+      "local.acuvue.ru",
     ]
   end
 end
