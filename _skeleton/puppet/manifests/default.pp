@@ -1,6 +1,8 @@
 # mysql root password
 $mysqlpw = "3.1415926"
 
+$php_version = '5.6'
+
 # default executable path
 Exec {
     path => ["/usr/bin", "/bin", "/usr/sbin", "/sbin", "/usr/local/bin", "/usr/local/sbin"],
@@ -65,11 +67,21 @@ class apache {
 class apache-mod_php {
     include php, apache
 
-    file { "/etc/php5/apache2/php.ini":
-        source => "puppet:///modules/php/php.ini",
-        backup => '.original',
-        notify => Service["apache2"],
-        require => Package["php5"],
+    if $php_version == '5.6' {
+        file { "/etc/php5/apache2/php.ini":
+            source => "puppet:///modules/php56/php.ini",
+            backup => '.original',
+            notify => Service["apache2"],
+            require => Package["php5"],
+        }
+    }
+    else {
+        file { "/etc/php5/apache2/php.ini":
+            source => "puppet:///modules/php/php.ini",
+            backup => '.original',
+            notify => Service["apache2"],
+            require => Package["php5"],
+        }
     }
 
     # change apache user and group to vagrant to avoid privilegs issues
@@ -83,10 +95,19 @@ class apache-mod_php {
 class apache-fastcgi {
     include apache, php-fpm
 
-    file { "/etc/php5/fpm/php.ini":
-        source => "puppet:///modules/php/php.ini",
-        backup => '.original',
-        require => Package["php5-fpm"],
+    if $php_version == '5.6' {
+        file { "/etc/php5/fpm/php.ini":
+            source => "puppet:///modules/php56/php.ini",
+            backup => '.original',
+            require => Package["php5-fpm"],
+        }
+    }
+    else {
+        file { "/etc/php5/fpm/php.ini":
+            source => "puppet:///modules/php/php.ini",
+            backup => '.original',
+            require => Package["php5-fpm"],
+        }
     }
 
     apt::install{ ["libapache2-mod-fastcgi"]: }
@@ -109,6 +130,25 @@ class memcache {
 }
 
 class php {
+    if $php_version == '5.6' {
+        apt::install{ [ "software-properties-common", "python-software-properties" ]: }
+
+        exec { "add-apt-repository ppa:ondrej/php5-5.6":
+            require => [
+                Package["python-software-properties"],
+                Package["software-properties-common"]
+            ]
+        }
+
+        exec { "Update the APT sources again":
+            command => "apt-get update",
+            require => [
+                File["/etc/apt/sources.list"],
+                Exec["add-apt-repository ppa:ondrej/php5-5.6"]
+            ]
+        }
+    }
+
     apt::install{ [ "php5", "php5-curl", "php5-mysql", "php5-xdebug", "php5-memcached" ]: }
 
     exec { "php5enmod mcrypt":
@@ -228,7 +268,7 @@ define apache::vhost() {
             require => File["/etc/apache2/sites-available/${name}.conf"];
 
         "/etc/apache2/sites-available/${name}.conf":
-            source => "puppet:///modules/apache/vhosts/sample.conf",
+            source => "puppet:///modules/apache/vhosts/${name}.conf",
             require => Package["apache2"];
 
         "/etc/apache2/sites-enabled/${name}-ssl.conf":
@@ -238,7 +278,7 @@ define apache::vhost() {
             require => File["/etc/apache2/sites-available/${name}-ssl.conf"];
 
         "/etc/apache2/sites-available/${name}-ssl.conf":
-            source => "puppet:///modules/apache/vhosts/sample-ssl.conf",
+            source => "puppet:///modules/apache/vhosts/${name}-ssl.conf",
             require => Package["apache2"];
     }
 }
