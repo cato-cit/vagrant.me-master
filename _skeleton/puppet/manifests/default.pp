@@ -55,7 +55,7 @@ class apache {
         require => Package["apache2"],
     }
 
-    apache::module { ['ssl.load', 'rewrite.load']: }
+    apache::module { ['ssl.load', 'rewrite.load', 'headers.load']: }
 
     file { "/etc/apache2/sites-enabled/000-default.conf":
         ensure => absent,
